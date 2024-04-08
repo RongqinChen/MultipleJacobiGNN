@@ -11,7 +11,17 @@
             "program": "ImgFilter.py",
             "console": "integratedTerminal",
             "args": [
-                "--test", "--repeat", "1", "--dataset", "rejection", "--fixalpha", "--jacobi"
+                "--test", "--repeat", "1", "--dataset", "rejection", "--jacobi"
+            ]
+        },
+        {
+            "name": "ImgMultipleFilter.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "ImgMultipleFilter.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--test", "--repeat", "1", "--dataset", "rejection", "--jacobi"
             ]
         }
     ]

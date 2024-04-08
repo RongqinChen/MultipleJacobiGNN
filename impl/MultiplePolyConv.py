@@ -1,11 +1,8 @@
 import torch
 import torch.nn as nn
 from torch import Tensor
-from scipy.special import comb
-from torch_geometric.utils import add_self_loops
-from torch_geometric.utils import get_laplacian, degree
+from torch_geometric.utils import degree
 from torch_sparse import SparseTensor
-from torch_geometric.nn import MessagePassing
 import numpy as np
 
 
@@ -42,8 +39,8 @@ def MultipleJacobiConv(k, adj, xs_list, alphas_list, a_list, b_list):
     if k == 0:
         return xs_list[0]
 
-    xs = xs_list[k - 1]             # shape: L, M
-    alphas = alphas_list[k - 1]     # shape: L, M
+    xs = xs_list[k - 1]
+    alphas = alphas_list[k - 1]
 
     if k == 1:
         new_xs = [
@@ -55,12 +52,14 @@ def MultipleJacobiConv(k, adj, xs_list, alphas_list, a_list, b_list):
     pre_xs = xs_list[k - 2]
     pre_alphas = alphas_list[k - 2]
     new_xs = []
-    for x, pre_x, alpha, pre_alpha, a, b in zip(xs, pre_xs, alphas, pre_alphas, a_list, b_list):
+    for x, pre_x, alpha, pre_alpha, a, b in zip(
+        xs, pre_xs, alphas, pre_alphas, a_list, b_list
+    ):
         coef_nu1 = (2 * k + a + b + 1) * (2 * k + a + b + 2)
         coef_de1 = 2 * (k + 1) * (k + a + b + 1)
         coef_nu2 = (a**2 - b**2) * (2 * k + a + b + 1)
         coef_de2 = 2 * (k + 1) * (k + a + b + 1) * (2 * k + a + b)
-        coef_nu3 = (k + a)(k + b)(2 * k + a + b + 2)
+        coef_nu3 = (k + a) * (k + b) * (2 * k + a + b + 2)
         coef_de3 = (k + 1) * (k + a + b + 1) * (2 * k + a + b)
         coef1 = alpha * coef_nu1 / coef_de1
         coef2 = alpha * coef_nu2 / coef_de2
@@ -90,7 +89,6 @@ class MultiplePolyConvFrame(nn.Module):
         aggr: int = "gcn",
         cached: bool = True,
         alpha: float = 1.0,
-        fixed: float = False,
         fixed_w: float = True,
     ):
         super().__init__()
@@ -99,33 +97,31 @@ class MultiplePolyConvFrame(nn.Module):
         if ab_tuple_list is None:
             step = 0.5
             ab_tuple_list = [
-                (0, b) for b in np.arange(0, 3, step)
+                (0.0, b) for b in np.arange(0, 3, step)
             ] + [
-                (a, 0) for a in np.arange(0 + step, 3, step)
+                (a, 0.0) for a in np.arange(0 + step, 3, step)
             ]
 
         self.ab_tuple_list = ab_tuple_list
-        self.a_list = nn.ModuleList(
+        self.a_list = nn.ParameterList([
             nn.Parameter(torch.tensor(ab_tuple[0]), requires_grad=not fixed_w)
             for ab_tuple in ab_tuple_list
-        )
-        self.b_list = nn.ModuleList(
+        ])
+        self.b_list = nn.ParameterList([
             nn.Parameter(torch.tensor(ab_tuple[1]), requires_grad=not fixed_w)
             for ab_tuple in ab_tuple_list
-        )
+        ])
         self.num_ab_tuples = len(ab_tuple_list)
 
         self.base_alpha = float(min(1 / alpha, 1))
-        self.alphas_dict = nn.ModuleDict({
-            (k, m): nn.Parameter(torch.tensor(self.base_alpha))
-            for k in range(depth) for m in range(self.num_ab_tuples)
-        })
-        self.alphas_list = [
-            [
-                self.alphas_dict[(k, m)] for m in range(self.num_ab_tuples)
-            ]
-            for k in range(depth)
-        ]
+        self.alphas_dict = nn.ParameterDict(
+            {
+                f"{k}_{m}": nn.Parameter(torch.tensor(self.base_alpha))
+                for k in range(depth)
+                for m in range(self.num_ab_tuples)
+            }
+        )
+
         self.cached = cached
         self.aggr = aggr
         self.adj = None
@@ -141,12 +137,16 @@ class MultiplePolyConvFrame(nn.Module):
             n_node = x.shape[0]
             self.adj = buildAdj(edge_index, edge_attr, n_node, self.aggr)
 
-        alphas = [self.base_alpha * torch.tanh(_) for _ in self.alphas]
+        alphas_list = [
+            [self.alphas_dict[f"{k}_{m}"] for m in range(self.num_ab_tuples)]
+            for k in range(self.depth)
+        ]
+        xs = [x] * self.num_ab_tuples
+        xs_list = [xs]
 
-        xs = [self.conv_fn(0, [x], self.adj, alphas)]
-        for L in range(1, self.depth + 1):
-            tx = self.conv_fn(L, xs, self.adj, alphas)
-            xs.append(tx)
-        xs = [x.unsqueeze(1) for x in xs]
-        x = torch.cat(xs, dim=1)
-        return x
+        for k in range(1, self.depth + 1):
+            xs = self.conv_fn(k, self.adj, xs_list, alphas_list, self.a_list, self.b_list)
+            xs_list.append(xs)
+
+        h = torch.cat(xs_list, dim=-1)
+        return h
