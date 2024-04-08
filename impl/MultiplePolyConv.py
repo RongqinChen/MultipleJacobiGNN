@@ -126,6 +126,7 @@ class MultiplePolyConvFrame(nn.Module):
         self.aggr = aggr
         self.adj = None
         self.conv_fn = conv_fn
+        self.w = nn.Parameter(torch.ones((1, len(self.ab_tuple_list), 1, 1)))
 
     def forward(self, x: Tensor, edge_index: Tensor, edge_attr: Tensor):
         """
@@ -148,5 +149,10 @@ class MultiplePolyConvFrame(nn.Module):
             xs = self.conv_fn(k, self.adj, xs_list, alphas_list, self.a_list, self.b_list)
             xs_list.append(xs)
 
-        h = torch.cat(xs_list, dim=-1)
-        return h
+        for idx in range(len(xs_list)):
+            xs_list[idx] = torch.stack(xs_list[idx], 1)
+
+        h = torch.stack(xs_list, dim=2)
+        wh = self.w * h
+        sh = wh.sum(1)
+        return sh
