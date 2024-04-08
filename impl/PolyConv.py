@@ -142,21 +142,20 @@ def JacobiConv(L, xs, adj, alphas, a=1.0, b=1.0, l=-1.0, r=1.0):
     if L == 0:
         return xs[0]
     if L == 1:
-        coef1 = (a - b) / 2 - (a + b + 2) / 2 * (l + r) / (r - l)
-        coef1 *= alphas[0]
-        coef2 = (a + b + 2) / (r - l)
-        coef2 *= alphas[0]
+        coef1 = (a - b) / 2 * alphas[0]
+        coef2 = (a + b + 2) / 2 * alphas[0]
         return coef1 * xs[-1] + coef2 * (adj @ xs[-1])
+
     coef_l = 2 * L * (L + a + b) * (2 * L - 2 + a + b)
     coef_lm1_1 = (2 * L + a + b - 1) * (2 * L + a + b) * (2 * L + a + b - 2)
     coef_lm1_2 = (2 * L + a + b - 1) * (a**2 - b**2)
     coef_lm2 = 2 * (L - 1 + a) * (L - 1 + b) * (2 * L + a + b)
+
     tmp1 = alphas[L - 1] * (coef_lm1_1 / coef_l)
     tmp2 = alphas[L - 1] * (coef_lm1_2 / coef_l)
     tmp3 = alphas[L - 1] * alphas[L - 2] * (coef_lm2 / coef_l)
-    tmp1_2 = tmp1 * (2 / (r - l))
-    tmp2_2 = tmp1 * ((r + l) / (r - l)) + tmp2
-    nx = tmp1_2 * (adj @ xs[-1]) - tmp2_2 * xs[-1]
+
+    nx = tmp1 * (adj @ xs[-1]) - tmp2 * xs[-1]
     nx -= tmp3 * xs[-2]
     return nx
 
