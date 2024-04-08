@@ -11,7 +11,7 @@ import os
 from numpy.linalg import eigh
 import math
 
-filter_type = ['low', 'high', 'band', 'rejection', 'comb', 'low_band']
+filter_type = ["low", "high", "band", "rejection", "comb", "low_band"]
 
 
 class TwoDGrid(InMemoryDataset):
@@ -25,23 +25,23 @@ class TwoDGrid(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return 'data.pt'
+        return "data.pt"
 
     def download(self):
         pass
 
     def process(self):
         # Read data into huge `Data` list.
-        b = self.processed_paths[0]
+        # b = self.processed_paths[0]
         a = sio.loadmat(self.raw_paths[0])  # 'subgraphcount/randomgraph.mat')
         # list of adjacency matrix
-        A = a['A']
+        A = a["A"]
         # list of output
-        F = a['F']
+        F = a["F"]
         F = F.astype(np.float32)
         # Y=a['Y']
         # Y=Y.astype(np.float32)
-        M = a['mask']
+        M = a["mask"]
         M = M.astype(np.float32)
 
         data_list = []
@@ -73,13 +73,15 @@ def visualize(y):
 
 
 def myeign(L):
-    if os.path.exists('./data/eigenvalues.npy') and os.path.exists('./data/eigenvectors.npy'):
-        eigenvalues = np.load('./data/eigenvalues.npy')
-        eigenvectors = np.load('./data/eigenvectors.npy')
+    if os.path.exists("./data/eigenvalues.npy") and os.path.exists(
+        "./data/eigenvectors.npy"
+    ):
+        eigenvalues = np.load("./data/eigenvalues.npy")
+        eigenvectors = np.load("./data/eigenvectors.npy")
     else:
         eigenvalues, eigenvectors = eigh(L)
-        np.save('./data/eigenvalues.npy', eigenvalues)
-        np.save('./data/eigenvectors.npy', eigenvectors)
+        np.save("./data/eigenvalues.npy", eigenvalues)
+        np.save("./data/eigenvectors.npy", eigenvectors)
     return eigenvalues, eigenvectors
 
 
@@ -95,54 +97,54 @@ def filtering(filter_type, dataset):
     D_vec_invsqrt_corr = 1 / np.sqrt(D_vec)
     D_invsqrt_corr = np.diag(D_vec_invsqrt_corr)
     # print(D_invsqrt_corr)
-    L = np.eye(nnodes)-D_invsqrt_corr @ adj @ D_invsqrt_corr
+    L = np.eye(nnodes) - D_invsqrt_corr @ adj @ D_invsqrt_corr
     # print(L)
     eigenvalues, eigenvectors = myeign(L)
     # print(eigenvalues[3])
 
     # low-pass
-    if filter_type == 'low':
-        value_tmp = [math.exp(-10*(xxx-0)**2) for xxx in eigenvalues]
+    if filter_type == "low":
+        value_tmp = [math.exp(-10 * (xxx - 0) ** 2) for xxx in eigenvalues]
 
     # high-pass
-    elif filter_type == 'high':
-        value_tmp = [1-math.exp(-10*(xxx-0)**2) for xxx in eigenvalues]
+    elif filter_type == "high":
+        value_tmp = [1 - math.exp(-10 * (xxx - 0) ** 2) for xxx in eigenvalues]
 
     # band-pass
-    elif filter_type == 'band':
-        value_tmp = [math.exp(-10*(xxx-1)**2) for xxx in eigenvalues]
+    elif filter_type == "band":
+        value_tmp = [math.exp(-10 * (xxx - 1) ** 2) for xxx in eigenvalues]
 
     # band_rejection
-    elif filter_type == 'rejection':
-        value_tmp = [1-math.exp(-10*(xxx-1)**2) for xxx in eigenvalues]
+    elif filter_type == "rejection":
+        value_tmp = [1 - math.exp(-10 * (xxx - 1) ** 2) for xxx in eigenvalues]
 
     # comb
-    elif filter_type == 'comb':
-        value_tmp = [abs(np.sin(xxx*math.pi)) for xxx in eigenvalues]
+    elif filter_type == "comb":
+        value_tmp = [abs(np.sin(xxx * math.pi)) for xxx in eigenvalues]
 
     # low_band
-    elif filter_type == 'low_band':
+    elif filter_type == "low_band":
         y = []
         for i in eigenvalues:
             if i < 0.5:
                 y.append(1)
             elif i < 1 and i >= 0.5:
-                y.append(math.exp(-100*(i-0.5)**2))
+                y.append(math.exp(-100 * (i - 0.5) ** 2))
             else:
-                y.append(math.exp(-50*(i-1.5)**2))
+                y.append(math.exp(-50 * (i - 1.5) ** 2))
         value_tmp = y
 
     value_tmp = np.array(value_tmp)
     value_tmp = np.diag(value_tmp)
     # print(value_tmp[5000][5000])
 
-    y = eigenvectors@value_tmp@eigenvectors.T@x
-    np.save('y_'+filter_type+'.npy', y)
+    y = eigenvectors @ value_tmp @ eigenvectors.T @ x
+    np.save("y_" + filter_type + ".npy", y)
     return y
 
 
 def load_img(name):
-    ds = TwoDGrid(root='data/2Dgrid', pre_transform=None)
+    ds = TwoDGrid(root="data/2Dgrid", pre_transform=None)
     y = filtering(name, ds)
     y = torch.Tensor(y)
     data = ds[0]

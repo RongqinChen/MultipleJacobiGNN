@@ -7,16 +7,24 @@ from torch import Tensor, LongTensor
 
 
 class BaseGraph:
-    '''
-        A general format for datasets.
-        Args:
-            x (Tensor): node feature, of shape (number of node, F).
-            edge_index (LongTensor): of shape (2, number of edge)
-            edge_weight (Tensor): of shape (number of edge)
-            mask: a node mask to show a training/valid/test dataset split, of shape (number of node). mask[i]=0, 1, 2 means the i-th node in train, valid, test dataset respectively.
-    '''
-    def __init__(self, x: Tensor, edge_index: LongTensor, edge_weight: Tensor,
-                 y: Tensor, mask: LongTensor):
+    """
+    A general format for datasets.
+    Args:
+        x (Tensor): node feature, of shape (number of node, F).
+        edge_index (LongTensor): of shape (2, number of edge)
+        edge_weight (Tensor): of shape (number of edge)
+        mask: a node mask to show a training/valid/test dataset split, of shape (number of node).
+        mask[i]=0, 1, 2 means the i-th node in train, valid, test dataset respectively.
+    """
+
+    def __init__(
+        self,
+        x: Tensor,
+        edge_index: LongTensor,
+        edge_weight: Tensor,
+        y: Tensor,
+        mask: LongTensor,
+    ):
         self.x = x
         self.edge_index = edge_index
         self.edge_attr = edge_weight
@@ -34,7 +42,8 @@ class BaseGraph:
     def to_undirected(self):
         if not is_undirected(self.edge_index):
             self.edge_index, self.edge_attr = to_undirected(
-                self.edge_index, self.edge_attr)
+                self.edge_index, self.edge_attr
+            )
 
     def to(self, device):
         self.x = self.x.to(device)
@@ -45,13 +54,13 @@ class BaseGraph:
         return self
 
 
-def split(data: BaseGraph, split: str="dense"):
-    '''
+def split(data: BaseGraph, split: str = "dense"):
+    """
     split data in to train/valid/test set.
     Args:
         data (BaseGraph): the dataset to split.
-        split (str): the split mode, choice: ["sparse", "dense"] 
-    '''
+        split (str): the split mode, choice: ["sparse", "dense"]
+    """
     dense_split = [0.6, 0.2]
     sparse_split = [0.025, 0.025]
     if split == "dense":
@@ -63,7 +72,8 @@ def split(data: BaseGraph, split: str="dense"):
     percls_trn = int(round(u_split[0] * len(data.y) / data.num_classes))
     val_lb = int(round(u_split[1] * len(data.y)))
     train_mask, val_mask, test_mask = du.random_planetoid_splits(
-        data, data.num_classes, percls_trn, val_lb)
+        data, data.num_classes, percls_trn, val_lb
+    )
     dev = data.x.device
     mask = torch.empty((data.x.shape[0]), dtype=torch.int8, device=dev)
     mask[train_mask] = 0
@@ -73,13 +83,21 @@ def split(data: BaseGraph, split: str="dense"):
 
 
 def load_dataset(name: str, split_t="dense"):
-    '''
+    """
     load dataset into a base graph format.
-    '''
+    """
     savepath = f"./data/{name}.pt"
     if name in [
-            'cora', 'citeseer', 'pubmed', 'computers', 'photo', 'texas',
-            'cornell', 'chameleon', 'film', 'squirrel'
+        "cora",
+        "citeseer",
+        "pubmed",
+        "computers",
+        "photo",
+        "texas",
+        "cornell",
+        "chameleon",
+        "film",
+        "squirrel",
     ]:
         if os.path.exists(savepath):
             bg = torch.load(savepath, map_location="cpu")
@@ -98,7 +116,7 @@ def load_dataset(name: str, split_t="dense"):
         bg.y = bg.y.to(torch.int64)
         torch.save(bg, savepath)
         return bg
-    elif name in ['low', 'high', 'band', 'rejection', 'comb', 'low_band']:
+    elif name in ["low", "high", "band", "rejection", "comb", "low_band"]:
         if os.path.exists(savepath):
             bg = torch.load(savepath, map_location="cpu")
             return bg
