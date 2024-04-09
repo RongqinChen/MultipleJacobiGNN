@@ -97,9 +97,9 @@ class MultiplePolyConvFrame(nn.Module):
         if ab_tuple_list is None:
             step = 0.5
             ab_tuple_list = [
-                (0.0, b) for b in np.arange(0, 3, step)
+                (0.0, b) for b in np.arange(0, 2, step)
             ] + [
-                (a, 0.0) for a in np.arange(0 + step, 3, step)
+                (a, 0.0) for a in np.arange(0 + step, 2, step)
             ]
 
         self.ab_tuple_list = ab_tuple_list
@@ -154,5 +154,5 @@ class MultiplePolyConvFrame(nn.Module):
 
         h = torch.stack(xs_list, dim=2)
         wh = self.w * h
-        sh = wh.sum(1)
+        sh = wh.mean(1)
         return sh

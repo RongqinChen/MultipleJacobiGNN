@@ -65,7 +65,8 @@ def work(conv_layer: int = 10,
     for rep in range(args.repeat):
         out_loss.append([])
         utils.set_seed(rep)
-        for idx in range(50):
+        from tqdm import tqdm
+        for idx in tqdm(range(50)):
             y = masked_dataset.y[:, idx].reshape(-1, 1)
             gnn = buildModel(conv_layer, aggr, alpha, idx, **kwargs)
             optimizer = Adam([{
@@ -125,6 +126,6 @@ if __name__ == '__main__':
                                     storage="sqlite:///" + args.path + args.name + ".db",
                                     study_name=args.name,
                                     load_if_exists=True)
-        study.optimize(search_hyper_params, n_trials=args.optruns, n_jobs=2)
+        study.optimize(search_hyper_params, n_trials=args.optruns)
         print("best params ", study.best_params)
         print("best valf1 ", study.best_value)
