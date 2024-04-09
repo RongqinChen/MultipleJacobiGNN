@@ -55,12 +55,12 @@ def MultipleJacobiConv(k, adj, xs_list, alphas_list, a_list, b_list):
     for x, pre_x, alpha, pre_alpha, a, b in zip(
         xs, pre_xs, alphas, pre_alphas, a_list, b_list
     ):
-        coef_nu1 = (2 * k + a + b + 1) * (2 * k + a + b + 2)
-        coef_de1 = 2 * (k + 1) * (k + a + b + 1)
-        coef_nu2 = (a**2 - b**2) * (2 * k + a + b + 1)
-        coef_de2 = 2 * (k + 1) * (k + a + b + 1) * (2 * k + a + b)
-        coef_nu3 = (k + a) * (k + b) * (2 * k + a + b + 2)
-        coef_de3 = (k + 1) * (k + a + b + 1) * (2 * k + a + b)
+        coef_nu1 = (2 * k + a + b) * (2 * k + a + b - 1)
+        coef_de1 = (2 * k) * (k + a + b)
+        coef_nu2 = (a**2 - b**2) * (2 * k + a + b - 1)
+        coef_de2 = 2 * k * (k + a + b) * (2 * k + a + b - 2)
+        coef_nu3 = (k + a - 1) * (k + b - 1) * (2 * k + a + b)
+        coef_de3 = k * (k + a + b) * (2 * k + a + b - 2)
         coef1 = alpha * coef_nu1 / coef_de1
         coef2 = alpha * coef_nu2 / coef_de2
         coef3 = alpha * pre_alpha * coef_nu3 / coef_de3
